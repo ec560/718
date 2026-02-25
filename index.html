@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home</title>
+  </head>
+  <body>
+    <header>
+      <h1>Hello</h1>
+    </header>
+
+    <main>
+      <p>I am website</p>
+    </main>
+
+    <footer>
+      <small>&copy; <span id="year"></span></small>
+    </footer>
+
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
