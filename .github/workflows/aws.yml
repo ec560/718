@@ -19,4 +19,4 @@ jobs:
     
     - name: Sync to S3
       shell: bash
-      run: aws s3 sync . "s3://${{ secrets.S3_BUCKET_NAME }}" --delete --exclude ".git/*" --exclude ".github/*" --exclude "README.md" --exclude "*.zip"
+      run: aws s3 sync frontend/ "s3://${{ secrets.S3_BUCKET_NAME }}" --delete
