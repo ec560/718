@@ -13,9 +13,14 @@ const headers = {
   "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE"
 };
 
+function resolveUserId(event){
+  const claims = event.requestContext?.authorizer?.jwt?.claims || event.requestContext?.authorizer?.claims || {};
+  return claims.sub || claims.username || claims["cognito:username"] || event.queryStringParameters?.userId || "demo-user";
+}
+
 export const handler = async (event) => {
   try {
-    const userId = event.queryStringParameters?.userId || "demo-user";
+    const userId = resolveUserId(event);
 
     const result = await docClient.send(new QueryCommand({
       TableName: TABLE_NAME,

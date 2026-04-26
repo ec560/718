@@ -7,6 +7,17 @@
 </head>
 <body>
 <h2 class="sr-only">Meridian</h2>
+<script>
+  window.__MERIDIAN_COGNITO_CONFIG__ = window.__MERIDIAN_COGNITO_CONFIG__ || {
+    authority: "",
+    domain: "",
+    clientId: "",
+    redirectUri: "",
+    logoutUri: "",
+    scope: "openid email profile"
+  };
+</script>
+<script src="vendor/oidc-client-ts.min.js"></script>
 
 <!-- LOGIN -->
 <div id="login-screen">
@@ -20,12 +31,13 @@
       <div class="login-logo">Meridian</div>
       <div class="auth-copy" id="auth-copy">A quiet place for the day ahead.</div>
       <div class="login-form">
-        <input type="text" id="username" placeholder="Username" autocomplete="off"/>
-        <input type="password" id="password" placeholder="Password"/>
+        <input type="text" id="username" placeholder="Username or email" autocomplete="username"/>
+        <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
         <div class="login-err" id="login-err"></div>
         <button class="login-btn" id="auth-submit" onclick="tryLogin()">Log in</button>
       </div>
       <div class="login-hint" id="auth-hint">Demo access.</div>
+      <div class="auth-status" id="auth-status">Demo login is active until Cognito is configured.</div>
       <div class="auth-switch" id="auth-switch-wrap"><span id="auth-switch-prefix">New here?</span> <button class="auth-link" type="button" id="auth-switch">Sign up</button></div>
     </div>
   </div>
@@ -149,4 +161,3 @@
 <script src="app.js"></script>
 </body>
 </html>
-

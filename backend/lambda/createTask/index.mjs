@@ -14,11 +14,16 @@ const headers = {
   "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE"
 };
 
+function resolveUserId(event, body){
+  const claims = event.requestContext?.authorizer?.jwt?.claims || event.requestContext?.authorizer?.claims || {};
+  return claims.sub || claims.username || claims["cognito:username"] || body.userId || "demo-user";
+}
+
 export const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || "{}");
 
-    const userId = body.userId || "demo-user";
+    const userId = resolveUserId(event, body);
     const taskId = crypto.randomUUID();
 
     const task = {
