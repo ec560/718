@@ -22,7 +22,6 @@ let draggedTaskId = null;
 let dragHoverPriority = null;
 let undoAction = null;
 let undoTimer = null;
-let authMode = 'login';
 let authSession = null;
 let userManager = null;
 
@@ -45,17 +44,6 @@ function getRedirectUri(){
 function getLogoutUri(){
   if(typeof COGNITO.logoutUri === 'string' && COGNITO.logoutUri.trim()) return COGNITO.logoutUri.trim();
   return getRedirectUri();
-}
-
-function goToSignup(){
-  const signupUrl =
-    `${getCognitoBaseUrl()}/signup` +
-    `?client_id=${encodeURIComponent(COGNITO.clientId)}` +
-    `&response_type=code` +
-    `&scope=${encodeURIComponent(COGNITO.scope)}` +
-    `&redirect_uri=${encodeURIComponent(COGNITO.redirectUri)}`;
-
-  window.location.href = signupUrl;
 }
 
 function getLoginUrl(loginHint = ''){
@@ -116,73 +104,18 @@ function setLoginError(message){
   if(el) el.textContent = message || '';
 }
 
-function setAuthShellState(){
-  const configured = isCognitoConfigured();
-  document.body.classList.toggle('cognito-auth', configured);
-  const password = document.getElementById('password');
-  if(password) password.hidden = configured;
-  const status = document.getElementById('auth-status');
-  if(status){
-    status.textContent = configured
-      ? 'Amazon Cognito managed login is enabled.'
-      : 'Demo login is active until Cognito is configured.';
-  }
-}
-
 function updateAuthCopy(){
   const configured = isCognitoConfigured();
   const submit = document.getElementById('auth-submit');
-  const hint = document.getElementById('auth-hint');
-  const copy = document.getElementById('auth-copy');
-  const switchBtn = document.getElementById('auth-switch');
-  const switchPrefix = document.getElementById('auth-switch-prefix');
 
   if(submit){
     submit.textContent = configured
-      ? (authMode === 'signup' ? 'Create account' : 'Continue with Cognito')
-      : (authMode === 'signup' ? 'Sign up' : 'Log in');
-  }
-
-  if(hint){
-    hint.textContent = configured
-      ? (authMode === 'signup'
-        ? 'You will finish registration in Amazon Cognito.'
-        : 'You will be redirected to Amazon Cognito.')
-      : 'Demo access.';
-  }
-
-  if(copy){
-    copy.textContent = configured
-      ? (authMode === 'signup'
-        ? 'Create your account in managed login, then return here automatically.'
-        : 'Sign in through the Cognito hosted login page.')
-      : (authMode === 'signup'
-        ? 'Set up a workspace for later.'
-        : 'A quiet place for the day ahead.');
-  }
-
-  if(switchBtn){
-    switchBtn.textContent = authMode === 'signup' ? 'Log in' : 'Sign up';
-    switchBtn.onclick = () => setAuthMode(authMode === 'signup' ? 'login' : 'signup');
-  }
-
-  if(switchPrefix){
-    switchPrefix.textContent = authMode === 'signup' ? 'Already inside?' : 'New here?';
+      ? 'Continue with Cognito'
+      : 'Continue';
   }
 }
 
-function setAuthMode(mode){
-  authMode = mode === 'signup' ? 'signup' : 'login';
-  updateAuthCopy();
-  const username = document.getElementById('username');
-  if(username) username.focus();
-}
-
-async function startCognitoFlow(mode, loginHint = ''){
-  if(mode === 'signup'){
-    goToSignup();
-    return;
-  }
+async function startCognitoFlow(loginHint = ''){
   const manager = ensureUserManager();
   if(!manager){
     window.location.href = getLoginUrl(loginHint || '');
@@ -243,14 +176,19 @@ async function getActiveCognitoAccessToken(){
 
 async function signOutRedirect(){
   const manager = ensureUserManager();
-  if(!manager) return;
-  const user = authSession || await manager.getUser();
-  const idTokenHint = user?.id_token || user?.idToken || undefined;
-  await manager.removeUser().catch(()=>{});
-  await manager.signoutRedirect({
-    id_token_hint: idTokenHint,
-    post_logout_redirect_uri: getLogoutUri()
-  });
+
+  if(manager){
+    await manager.removeUser().catch(()=>{});
+  }
+
+  authSession = null;
+
+  const logoutUrl =
+    `${getCognitoBaseUrl()}/logout` +
+    `?client_id=${encodeURIComponent(COGNITO.clientId)}` +
+    `&logout_uri=${encodeURIComponent(getLogoutUri())}`;
+
+  window.location.href = logoutUrl;
 }
 
 async function completeCognitoRedirect(){
@@ -282,7 +220,6 @@ async function enterApp(userKey){
 
 async function bootstrapAuth(){
   updateAuthCopy();
-  setAuthShellState();
   const manager = ensureUserManager();
   if(!manager) return;
   try{
@@ -414,11 +351,6 @@ async function deleteTaskOnApi(task){
   });
 }
 
-function syncAuthMode(){
-  updateAuthCopy();
-  setAuthShellState();
-}
-
 async function loadState(user){
   try{
     const d = localStorage.getItem('meridian_'+user);
@@ -461,30 +393,17 @@ async function loadRemoteTasks(user){
 }
 
 async function tryLogin(){
-  const u = document.getElementById('username').value.trim();
-  const p = document.getElementById('password').value;
-  if(isCognitoConfigured()){
-    if(!u){setLoginError('Enter a username or email.');return;}
-    setLoginError('');
-    try{
-      await startCognitoFlow(authMode, u);
-    }catch(e){
-      console.error('Could not start Cognito flow', e);
-      setLoginError(e.message || 'Could not start Cognito sign-in.');
-    }
+  if(!isCognitoConfigured()){
+    setLoginError('Cognito is not configured.');
     return;
   }
-  if(!u){setLoginError('Enter a username.');return;}
-  if(!p){setLoginError('Enter a password.');return;}
   setLoginError('');
-  await loadState(u);
-  await loadRemoteTasks(u);
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
-  syncSettings();
-  await checkEODReset();
-  render();
-  startTick();
+  try{
+    await startCognitoFlow('');
+  }catch(e){
+    console.error('Could not start Cognito flow', e);
+    setLoginError(e.message || 'Could not start Cognito sign-in.');
+  }
 }
 
 function logout(){
@@ -493,11 +412,8 @@ function logout(){
   const configured = isCognitoConfigured();
   state.user=null;
   authSession = null;
-  setAuthMode('login');
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
-  document.getElementById('username').value='';
-  document.getElementById('password').value='';
   setLoginError('');
   if(configured){
     void signOutRedirect().catch(err => {
@@ -506,16 +422,6 @@ function logout(){
     return;
   }
 }
-
-document.getElementById('password').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
-document.getElementById('username').addEventListener('keydown',e=>{
-  if(e.key!=='Enter') return;
-  if(isCognitoConfigured()){
-    tryLogin();
-    return;
-  }
-  document.getElementById('password').focus();
-});
 
 function getDurationSec(priority){
   const defaults = {p1:2*3600,p2:4*3600,p3:8*3600};

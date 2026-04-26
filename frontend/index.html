@@ -28,16 +28,9 @@
 
     <div class="login-card auth-card">
       <div class="login-logo">Meridian</div>
-      <div class="auth-copy" id="auth-copy">A quiet place for the day ahead.</div>
-      <div class="login-form">
-        <input type="text" id="username" placeholder="Username or email" autocomplete="username"/>
-        <input type="password" id="password" placeholder="Password" autocomplete="current-password"/>
-        <div class="login-err" id="login-err"></div>
-        <button class="login-btn" id="auth-submit" onclick="tryLogin()">Log in</button>
-      </div>
-      <div class="login-hint" id="auth-hint">Demo access.</div>
-      <div class="auth-status" id="auth-status">Demo login is active until Cognito is configured.</div>
-      <div class="auth-switch" id="auth-switch-wrap"><span id="auth-switch-prefix">New here?</span> <button class="auth-link" type="button" id="auth-switch">Sign up</button></div>
+      <div class="auth-copy">Sign in or create an account in Cognito.</div>
+      <div class="login-err" id="login-err"></div>
+      <button class="login-btn" id="auth-submit" onclick="tryLogin()">Continue with Cognito</button>
     </div>
   </div>
 </div>
