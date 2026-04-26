@@ -27,7 +27,7 @@ let authSession = null;
 let userManager = null;
 
 function isCognitoConfigured(){
-  return Boolean(OIDC && COGNITO.domain && COGNITO.clientId && COGNITO_AUTHORITY);
+  return Boolean(COGNITO.domain && COGNITO.clientId && COGNITO_AUTHORITY);
 }
 
 function getCognitoBaseUrl(){
@@ -56,6 +56,19 @@ function goToSignup(){
     `&redirect_uri=${encodeURIComponent(COGNITO.redirectUri)}`;
 
   window.location.href = signupUrl;
+}
+
+function getLoginUrl(loginHint = ''){
+  const loginUrl =
+    `${getCognitoBaseUrl()}/oauth2/authorize` +
+    `?client_id=${encodeURIComponent(COGNITO.clientId)}` +
+    `&response_type=code` +
+    `&scope=${encodeURIComponent(COGNITO.scope)}` +
+    `&redirect_uri=${encodeURIComponent(COGNITO.redirectUri)}`;
+  if(loginHint){
+    return `${loginUrl}&login_hint=${encodeURIComponent(loginHint)}`;
+  }
+  return loginUrl;
 }
 
 function buildCognitoMetadata(){
@@ -166,10 +179,13 @@ function setAuthMode(mode){
 }
 
 async function startCognitoFlow(mode, loginHint = ''){
-  const manager = ensureUserManager();
-  if(!manager) throw new Error('Cognito is not configured.');
   if(mode === 'signup'){
     goToSignup();
+    return;
+  }
+  const manager = ensureUserManager();
+  if(!manager){
+    window.location.href = getLoginUrl(loginHint || '');
     return;
   }
   await manager.signinRedirect({
@@ -1207,4 +1223,6 @@ function startTick(){
   }, 1000);
 }
 
-bootstrapAuth();
+document.addEventListener("DOMContentLoaded", () => {
+  bootstrapAuth();
+});
