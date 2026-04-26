@@ -1,12 +1,9 @@
 ﻿const API_BASE = "https://4zruyyxh4m.execute-api.us-east-2.amazonaws.com";
 const DEFAULT_CONFIG = {p1Hr:2,p2Hr:4,p3Hr:8,eod:'00:00',target:50};
 const POINTS = {p1:{onTime:12,late:6,miss:-6},p2:{onTime:8,late:4,miss:-4},p3:{onTime:5,late:2,miss:-2}};
-const COGNITO_CONFIG = window.__MERIDIAN_COGNITO_CONFIG__ || {};
-const COGNITO_SCOPE = typeof COGNITO_CONFIG.scope === 'string' && COGNITO_CONFIG.scope.trim()
-  ? COGNITO_CONFIG.scope.trim()
-  : (Array.isArray(COGNITO_CONFIG.scope) && COGNITO_CONFIG.scope.length
-    ? COGNITO_CONFIG.scope.join(' ')
-    : 'openid email profile');
+const COGNITO = window.__MERIDIAN_COGNITO_CONFIG__;
+const COGNITO_AUTHORITY = "https://cognito-idp.us-east-2.amazonaws.com/us-east-2_6rhUoc5IR";
+const COGNITO_SCOPE = COGNITO.scope || 'openid email profile';
 const OIDC = window.oidc || null;
 
 let state = {
@@ -30,22 +27,35 @@ let authSession = null;
 let userManager = null;
 
 function isCognitoConfigured(){
-  return Boolean(OIDC && COGNITO_CONFIG.domain && COGNITO_CONFIG.clientId && COGNITO_CONFIG.authority);
+  return Boolean(OIDC && COGNITO.domain && COGNITO.clientId && COGNITO_AUTHORITY);
 }
 
 function getCognitoBaseUrl(){
-  return isCognitoConfigured() ? `https://${String(COGNITO_CONFIG.domain).replace(/\/+$/, '')}` : '';
+  return COGNITO.domain.startsWith("http")
+    ? COGNITO.domain
+    : `https://${COGNITO.domain}`;
 }
 
 function getRedirectUri(){
-  if(typeof COGNITO_CONFIG.redirectUri === 'string' && COGNITO_CONFIG.redirectUri.trim()) return COGNITO_CONFIG.redirectUri.trim();
+  if(typeof COGNITO.redirectUri === 'string' && COGNITO.redirectUri.trim()) return COGNITO.redirectUri.trim();
   if(window.location && /^https?:$/.test(window.location.protocol)) return window.location.origin + window.location.pathname;
   return '';
 }
 
 function getLogoutUri(){
-  if(typeof COGNITO_CONFIG.logoutUri === 'string' && COGNITO_CONFIG.logoutUri.trim()) return COGNITO_CONFIG.logoutUri.trim();
+  if(typeof COGNITO.logoutUri === 'string' && COGNITO.logoutUri.trim()) return COGNITO.logoutUri.trim();
   return getRedirectUri();
+}
+
+function goToSignup(){
+  const signupUrl =
+    `${getCognitoBaseUrl()}/signup` +
+    `?client_id=${encodeURIComponent(COGNITO.clientId)}` +
+    `&response_type=code` +
+    `&scope=${encodeURIComponent(COGNITO.scope)}` +
+    `&redirect_uri=${encodeURIComponent(COGNITO.redirectUri)}`;
+
+  window.location.href = signupUrl;
 }
 
 function buildCognitoMetadata(){
@@ -61,8 +71,8 @@ function ensureUserManager(){
   if(userManager || !isCognitoConfigured()) return userManager;
   const storage = new OIDC.WebStorageStateStore({store: window.localStorage});
   userManager = new OIDC.UserManager({
-    authority: COGNITO_CONFIG.authority,
-    client_id: COGNITO_CONFIG.clientId,
+    authority: COGNITO_AUTHORITY,
+    client_id: COGNITO.clientId,
     redirect_uri: getRedirectUri(),
     post_logout_redirect_uri: getLogoutUri(),
     response_type: 'code',
@@ -159,12 +169,7 @@ async function startCognitoFlow(mode, loginHint = ''){
   const manager = ensureUserManager();
   if(!manager) throw new Error('Cognito is not configured.');
   if(mode === 'signup'){
-    const signinRequest = await manager._client.createSigninRequest({
-      login_hint: loginHint || undefined
-    });
-    const signupUrl = new URL(signinRequest.url);
-    signupUrl.pathname = '/signup';
-    window.location.assign(signupUrl.toString());
+    goToSignup();
     return;
   }
   await manager.signinRedirect({
