@@ -1067,18 +1067,6 @@ async function moveTask(id, newPriority){
     alert('Could not move task. Please try again.');
     return;
   }
-  showUndoToast('Moved "'+t.name+'" to '+priorityLabel(newPriority), async () => {
-    try{
-      const restored = await updateTaskOnApi(previous);
-      const currentIndex = state.tasks.findIndex(x=>x.id===restored.id);
-      if(currentIndex >= 0) state.tasks[currentIndex] = restored;
-      else state.tasks.splice(Math.min(previousIndex, state.tasks.length), 0, restored);
-      saveState(); render();
-    }catch(e){
-      console.error('Could not undo move', e);
-      alert('Could not restore the previous task state.');
-    }
-  });
 }
 
 // SETTINGS
